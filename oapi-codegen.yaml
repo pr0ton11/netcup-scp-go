@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+package: scp
+output: scp/client.gen.go
+generate:
+  models: true
+  client: true
+output-options:
+  # The netcup SCP OpenAPI spec uses some inline schemas rather than named $ref components.
+  # oapi-codegen's pruning logic can incorrectly remove synthesized types for these inline
+  # schemas, causing compilation errors. skip-prune keeps all generated types as a workaround.
+  skip-prune: true
