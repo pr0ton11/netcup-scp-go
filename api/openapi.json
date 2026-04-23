@@ -3,7 +3,7 @@
   "info": {
     "title": "SCP (Server Control Panel) REST API",
     "description": "The version number is updated with each SCP release, regardless of whether the API has changed. Breaking changes are handled by versioning individual endpoints in the request path.",
-    "version": "2026.0323.070538"
+    "version": "2026.0422.160638"
   },
   "externalDocs": {
     "description": "netcup Forum",
@@ -379,6 +379,15 @@
           }
         },
         "parameters": [
+          {
+            "name": "firewallPolicyId",
+            "in": "query",
+            "description": "Filter by assigned firewall policy",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
           {
             "name": "ip",
             "in": "query",
@@ -3273,14 +3282,6 @@
               "type": "integer",
               "format": "int32"
             }
-          },
-          {
-            "name": "withCountOfAffectedServers",
-            "in": "query",
-            "schema": {
-              "type": "boolean",
-              "default": false
-            }
           }
         ],
         "description": ""
@@ -5583,10 +5584,6 @@
             "items": {
               "$ref": "#/components/schemas/FirewallRule"
             }
-          },
-          "countOfAffectedServers": {
-            "type": "integer",
-            "format": "int32"
           }
         }
       },
@@ -6217,6 +6214,7 @@
       "/api/v1/resellers/{resellerId}/settings",
       "/api/v1/resellers/{resellerId}/smtp",
       "/api/v1/servers",
+      "/api/v1/servers/history",
       "/api/v1/servers/{serverId}",
       "/api/v1/servers/{serverId}/cloud-init",
       "/api/v1/servers/{serverId}/disks",

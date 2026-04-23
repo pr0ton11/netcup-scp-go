@@ -436,11 +436,10 @@ type FirewallAction string
 
 // FirewallPolicy defines model for FirewallPolicy.
 type FirewallPolicy struct {
-	CountOfAffectedServers *int32          `json:"countOfAffectedServers,omitempty"`
-	Description            *string         `json:"description,omitempty"`
-	Id                     *int32          `json:"id,omitempty"`
-	Name                   *string         `json:"name,omitempty"`
-	Rules                  *[]FirewallRule `json:"rules,omitempty"`
+	Description *string         `json:"description,omitempty"`
+	Id          *int32          `json:"id,omitempty"`
+	Name        *string         `json:"name,omitempty"`
+	Rules       *[]FirewallRule `json:"rules,omitempty"`
 }
 
 // FirewallPolicySave defines model for FirewallPolicySave.
@@ -1068,6 +1067,9 @@ type ValidationError struct {
 
 // GetApiV1ServersParams defines parameters for GetApiV1Servers.
 type GetApiV1ServersParams struct {
+	// FirewallPolicyId Filter by assigned firewall policy
+	FirewallPolicyId *int32 `form:"firewallPolicyId,omitempty" json:"firewallPolicyId,omitempty"`
+
 	// Ip Filter by ip
 	Ip    *string `form:"ip,omitempty" json:"ip,omitempty"`
 	Limit *int32  `form:"limit,omitempty" json:"limit,omitempty"`
@@ -1185,11 +1187,6 @@ type GetApiV1UsersUserIdFirewallPoliciesParams struct {
 
 	// Q Search by name or description
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
-}
-
-// GetApiV1UsersUserIdFirewallPoliciesIdParams defines parameters for GetApiV1UsersUserIdFirewallPoliciesId.
-type GetApiV1UsersUserIdFirewallPoliciesIdParams struct {
-	WithCountOfAffectedServers *bool `form:"withCountOfAffectedServers,omitempty" json:"withCountOfAffectedServers,omitempty"`
 }
 
 // PostApiV1UsersUserIdImagesKeyParams defines parameters for PostApiV1UsersUserIdImagesKey.
@@ -1581,7 +1578,7 @@ type ClientInterface interface {
 	DeleteApiV1UsersUserIdFirewallPoliciesId(ctx context.Context, userId int32, id int32, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetApiV1UsersUserIdFirewallPoliciesId request
-	GetApiV1UsersUserIdFirewallPoliciesId(ctx context.Context, userId int32, id int32, params *GetApiV1UsersUserIdFirewallPoliciesIdParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetApiV1UsersUserIdFirewallPoliciesId(ctx context.Context, userId int32, id int32, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutApiV1UsersUserIdFirewallPoliciesIdWithBody request with any body
 	PutApiV1UsersUserIdFirewallPoliciesIdWithBody(ctx context.Context, userId int32, id int32, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2617,8 +2614,8 @@ func (c *Client) DeleteApiV1UsersUserIdFirewallPoliciesId(ctx context.Context, u
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetApiV1UsersUserIdFirewallPoliciesId(ctx context.Context, userId int32, id int32, params *GetApiV1UsersUserIdFirewallPoliciesIdParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetApiV1UsersUserIdFirewallPoliciesIdRequest(c.Server, userId, id, params)
+func (c *Client) GetApiV1UsersUserIdFirewallPoliciesId(ctx context.Context, userId int32, id int32, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetApiV1UsersUserIdFirewallPoliciesIdRequest(c.Server, userId, id)
 	if err != nil {
 		return nil, err
 	}
@@ -3286,6 +3283,22 @@ func NewGetApiV1ServersRequest(server string, params *GetApiV1ServersParams) (*h
 
 	if params != nil {
 		queryValues := queryURL.Query()
+
+		if params.FirewallPolicyId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "firewallPolicyId", *params.FirewallPolicyId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
 
 		if params.Ip != nil {
 
@@ -5958,7 +5971,7 @@ func NewDeleteApiV1UsersUserIdFirewallPoliciesIdRequest(server string, userId in
 }
 
 // NewGetApiV1UsersUserIdFirewallPoliciesIdRequest generates requests for GetApiV1UsersUserIdFirewallPoliciesId
-func NewGetApiV1UsersUserIdFirewallPoliciesIdRequest(server string, userId int32, id int32, params *GetApiV1UsersUserIdFirewallPoliciesIdParams) (*http.Request, error) {
+func NewGetApiV1UsersUserIdFirewallPoliciesIdRequest(server string, userId int32, id int32) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -5988,28 +6001,6 @@ func NewGetApiV1UsersUserIdFirewallPoliciesIdRequest(server string, userId int32
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.WithCountOfAffectedServers != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "withCountOfAffectedServers", *params.WithCountOfAffectedServers, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "boolean", Format: ""}); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
@@ -7311,7 +7302,7 @@ type ClientWithResponsesInterface interface {
 	DeleteApiV1UsersUserIdFirewallPoliciesIdWithResponse(ctx context.Context, userId int32, id int32, reqEditors ...RequestEditorFn) (*DeleteApiV1UsersUserIdFirewallPoliciesIdResponse, error)
 
 	// GetApiV1UsersUserIdFirewallPoliciesIdWithResponse request
-	GetApiV1UsersUserIdFirewallPoliciesIdWithResponse(ctx context.Context, userId int32, id int32, params *GetApiV1UsersUserIdFirewallPoliciesIdParams, reqEditors ...RequestEditorFn) (*GetApiV1UsersUserIdFirewallPoliciesIdResponse, error)
+	GetApiV1UsersUserIdFirewallPoliciesIdWithResponse(ctx context.Context, userId int32, id int32, reqEditors ...RequestEditorFn) (*GetApiV1UsersUserIdFirewallPoliciesIdResponse, error)
 
 	// PutApiV1UsersUserIdFirewallPoliciesIdWithBodyWithResponse request with any body
 	PutApiV1UsersUserIdFirewallPoliciesIdWithBodyWithResponse(ctx context.Context, userId int32, id int32, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV1UsersUserIdFirewallPoliciesIdResponse, error)
@@ -10045,8 +10036,8 @@ func (c *ClientWithResponses) DeleteApiV1UsersUserIdFirewallPoliciesIdWithRespon
 }
 
 // GetApiV1UsersUserIdFirewallPoliciesIdWithResponse request returning *GetApiV1UsersUserIdFirewallPoliciesIdResponse
-func (c *ClientWithResponses) GetApiV1UsersUserIdFirewallPoliciesIdWithResponse(ctx context.Context, userId int32, id int32, params *GetApiV1UsersUserIdFirewallPoliciesIdParams, reqEditors ...RequestEditorFn) (*GetApiV1UsersUserIdFirewallPoliciesIdResponse, error) {
-	rsp, err := c.GetApiV1UsersUserIdFirewallPoliciesId(ctx, userId, id, params, reqEditors...)
+func (c *ClientWithResponses) GetApiV1UsersUserIdFirewallPoliciesIdWithResponse(ctx context.Context, userId int32, id int32, reqEditors ...RequestEditorFn) (*GetApiV1UsersUserIdFirewallPoliciesIdResponse, error) {
+	rsp, err := c.GetApiV1UsersUserIdFirewallPoliciesId(ctx, userId, id, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
