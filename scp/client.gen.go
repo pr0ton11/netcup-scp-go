@@ -1013,7 +1013,6 @@ type User struct {
 	Lastname               *string `json:"lastname,omitempty"`
 	PasswordlessMode       *bool   `json:"passwordlessMode,omitempty"`
 	SecureMode             *bool   `json:"secureMode,omitempty"`
-	SecureModeAppAccess    *bool   `json:"secureModeAppAccess,omitempty"`
 	ShowNickname           *bool   `json:"showNickname,omitempty"`
 	TimeZone               *string `json:"timeZone,omitempty"`
 	Username               *string `json:"username,omitempty"`
@@ -1038,7 +1037,6 @@ type UserSave struct {
 	Password               *string `json:"password,omitempty"`
 	PasswordlessMode       *bool   `json:"passwordlessMode,omitempty"`
 	SecureMode             *bool   `json:"secureMode,omitempty"`
-	SecureModeAppAccess    *bool   `json:"secureModeAppAccess,omitempty"`
 	ShowNickname           *bool   `json:"showNickname,omitempty"`
 	SoapWebservicePassword *string `json:"soapWebservicePassword,omitempty"`
 	TimeZone               string  `json:"timeZone"`
