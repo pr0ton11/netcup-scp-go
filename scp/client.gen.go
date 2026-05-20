@@ -490,6 +490,11 @@ type GuestAgentData struct {
 	GuestAgentData *map[string]interface{} `json:"guestAgentData,omitempty"`
 }
 
+// GuestAgentStatus defines model for GuestAgentStatus.
+type GuestAgentStatus struct {
+	Available *bool `json:"available,omitempty"`
+}
+
 // IPv4AddressMinimal defines model for IPv4AddressMinimal.
 type IPv4AddressMinimal struct {
 	Broadcast *string `json:"broadcast,omitempty"`
@@ -1419,6 +1424,9 @@ type ClientInterface interface {
 	// GetApiV1ServersServerIdGuestAgent request
 	GetApiV1ServersServerIdGuestAgent(ctx context.Context, serverId int32, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetApiV1ServersServerIdGuestAgentStatus request
+	GetApiV1ServersServerIdGuestAgentStatus(ctx context.Context, serverId int32, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// PostApiV1ServersServerIdImageWithBody request with any body
 	PostApiV1ServersServerIdImageWithBody(ctx context.Context, serverId int32, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1930,6 +1938,18 @@ func (c *Client) GetApiV1ServersServerIdGpuDriver(ctx context.Context, serverId 
 
 func (c *Client) GetApiV1ServersServerIdGuestAgent(ctx context.Context, serverId int32, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetApiV1ServersServerIdGuestAgentRequest(c.Server, serverId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetApiV1ServersServerIdGuestAgentStatus(ctx context.Context, serverId int32, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetApiV1ServersServerIdGuestAgentStatusRequest(c.Server, serverId)
 	if err != nil {
 		return nil, err
 	}
@@ -3762,6 +3782,40 @@ func NewGetApiV1ServersServerIdGuestAgentRequest(server string, serverId int32) 
 	}
 
 	operationPath := fmt.Sprintf("/api/v1/servers/%s/guest-agent", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetApiV1ServersServerIdGuestAgentStatusRequest generates requests for GetApiV1ServersServerIdGuestAgentStatus
+func NewGetApiV1ServersServerIdGuestAgentStatusRequest(server string, serverId int32) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "serverId", serverId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "integer", Format: "int32"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/servers/%s/guest-agent/status", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -7143,6 +7197,9 @@ type ClientWithResponsesInterface interface {
 	// GetApiV1ServersServerIdGuestAgentWithResponse request
 	GetApiV1ServersServerIdGuestAgentWithResponse(ctx context.Context, serverId int32, reqEditors ...RequestEditorFn) (*GetApiV1ServersServerIdGuestAgentResponse, error)
 
+	// GetApiV1ServersServerIdGuestAgentStatusWithResponse request
+	GetApiV1ServersServerIdGuestAgentStatusWithResponse(ctx context.Context, serverId int32, reqEditors ...RequestEditorFn) (*GetApiV1ServersServerIdGuestAgentStatusResponse, error)
+
 	// PostApiV1ServersServerIdImageWithBodyWithResponse request with any body
 	PostApiV1ServersServerIdImageWithBodyWithResponse(ctx context.Context, serverId int32, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV1ServersServerIdImageResponse, error)
 
@@ -7818,6 +7875,29 @@ func (r GetApiV1ServersServerIdGuestAgentResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetApiV1ServersServerIdGuestAgentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetApiV1ServersServerIdGuestAgentStatusResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *GuestAgentStatus
+	JSON404      *NotFoundError
+}
+
+// Status returns HTTPResponse.Status
+func (r GetApiV1ServersServerIdGuestAgentStatusResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetApiV1ServersServerIdGuestAgentStatusResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -9541,6 +9621,15 @@ func (c *ClientWithResponses) GetApiV1ServersServerIdGuestAgentWithResponse(ctx 
 	return ParseGetApiV1ServersServerIdGuestAgentResponse(rsp)
 }
 
+// GetApiV1ServersServerIdGuestAgentStatusWithResponse request returning *GetApiV1ServersServerIdGuestAgentStatusResponse
+func (c *ClientWithResponses) GetApiV1ServersServerIdGuestAgentStatusWithResponse(ctx context.Context, serverId int32, reqEditors ...RequestEditorFn) (*GetApiV1ServersServerIdGuestAgentStatusResponse, error) {
+	rsp, err := c.GetApiV1ServersServerIdGuestAgentStatus(ctx, serverId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetApiV1ServersServerIdGuestAgentStatusResponse(rsp)
+}
+
 // PostApiV1ServersServerIdImageWithBodyWithResponse request with arbitrary body returning *PostApiV1ServersServerIdImageResponse
 func (c *ClientWithResponses) PostApiV1ServersServerIdImageWithBodyWithResponse(ctx context.Context, serverId int32, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV1ServersServerIdImageResponse, error) {
 	rsp, err := c.PostApiV1ServersServerIdImageWithBody(ctx, serverId, contentType, body, reqEditors...)
@@ -10827,6 +10916,39 @@ func ParseGetApiV1ServersServerIdGuestAgentResponse(rsp *http.Response) (*GetApi
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest GuestAgentData
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFoundError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetApiV1ServersServerIdGuestAgentStatusResponse parses an HTTP response from a GetApiV1ServersServerIdGuestAgentStatusWithResponse call
+func ParseGetApiV1ServersServerIdGuestAgentStatusResponse(rsp *http.Response) (*GetApiV1ServersServerIdGuestAgentStatusResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetApiV1ServersServerIdGuestAgentStatusResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest GuestAgentStatus
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
