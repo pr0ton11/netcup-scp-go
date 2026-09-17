@@ -3,7 +3,7 @@
   "info": {
     "title": "SCP (Server Control Panel) REST API",
     "description": "The version number is updated with each SCP release, regardless of whether the API has changed. Breaking changes are handled by versioning individual endpoints in the request path.",
-    "version": "2026.0519.150426"
+    "version": "2026.0916.061229"
   },
   "externalDocs": {
     "description": "netcup Forum",
@@ -83,7 +83,8 @@
         "tags": [
           "Miscellaneous"
         ],
-        "summary": "Get maintenance information for system",
+        "summary": "Get maintenance information for system. This endpoint has been deprecated and will be removed by 31.12.2026.",
+        "deprecated": true,
         "responses": {
           "200": {
             "description": "Maintenance successfully loaded.",
@@ -175,14 +176,21 @@
       }
     },
     "/api/v1/rdns/ipv4/{ip}": {
-      "delete": {
+      "get": {
         "tags": [
           "Server Networking"
         ],
-        "summary": "Delete an rDNS entry of an IPv4.",
+        "summary": "Get rDNS for an IPv4.",
         "responses": {
-          "204": {
-            "description": "rDNS deleted successfully."
+          "200": {
+            "description": "rDNS returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rdns"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation error.",
@@ -208,21 +216,14 @@
         ],
         "description": ""
       },
-      "get": {
+      "delete": {
         "tags": [
           "Server Networking"
         ],
-        "summary": "Get rDNS for an IPv4.",
+        "summary": "Delete an rDNS entry of an IPv4.",
         "responses": {
-          "200": {
-            "description": "rDNS returned successfully.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Rdns"
-                }
-              }
-            }
+          "204": {
+            "description": "rDNS deleted successfully."
           },
           "422": {
             "description": "Validation error.",
@@ -283,14 +284,21 @@
       }
     },
     "/api/v1/rdns/ipv6/{ip}": {
-      "delete": {
+      "get": {
         "tags": [
           "Server Networking"
         ],
-        "summary": "Delete an rDNS entry of an IPv6.",
+        "summary": "Get rDNS for an IPv6.",
         "responses": {
-          "204": {
-            "description": "rDNS deleted successfully."
+          "200": {
+            "description": "rDNS returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rdns"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation error.",
@@ -316,21 +324,14 @@
         ],
         "description": ""
       },
-      "get": {
+      "delete": {
         "tags": [
           "Server Networking"
         ],
-        "summary": "Get rDNS for an IPv6.",
+        "summary": "Delete an rDNS entry of an IPv6.",
         "responses": {
-          "200": {
-            "description": "rDNS returned successfully.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Rdns"
-                }
-              }
-            }
+          "204": {
+            "description": "rDNS deleted successfully."
           },
           "422": {
             "description": "Validation error.",
@@ -431,12 +432,71 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sort by one or more fields. Prefix a field with '-' for descending order, no prefix for ascending. Allowed fields: name, nickname. Repeat the parameter to sort by multiple fields, e.g. ?sort=name&sort=-nickname.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         ],
         "description": ""
       }
     },
     "/api/v1/servers/{serverId}": {
+      "get": {
+        "tags": [
+          "Servers"
+        ],
+        "summary": "Get one server",
+        "responses": {
+          "200": {
+            "description": "Server successfully returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Server"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Server not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "loadServerLiveInfo",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "description": ""
+      },
       "patch": {
         "tags": [
           "Servers"
@@ -528,29 +588,24 @@
           }
         ],
         "description": "Only one attribute at a time."
-      },
+      }
+    },
+    "/api/v1/servers/{serverId}/disks": {
       "get": {
         "tags": [
-          "Servers"
+          "Server Disks"
         ],
-        "summary": "Get one server",
+        "summary": "Get disks of a server",
         "responses": {
           "200": {
-            "description": "Server successfully returned.",
+            "description": "Disks successfully loaded.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Server"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Server not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundError"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Disk"
+                  }
                 }
               }
             }
@@ -565,20 +620,10 @@
               "type": "integer",
               "format": "int32"
             }
-          },
-          {
-            "name": "loadServerLiveInfo",
-            "in": "query",
-            "schema": {
-              "type": "boolean",
-              "default": true
-            }
           }
         ],
         "description": ""
-      }
-    },
-    "/api/v1/servers/{serverId}/disks": {
+      },
       "patch": {
         "tags": [
           "Server Disks"
@@ -602,39 +647,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/EditDisksDriver"
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "serverId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "description": ""
-      },
-      "get": {
-        "tags": [
-          "Server Disks"
-        ],
-        "summary": "Get disks of a server",
-        "responses": {
-          "200": {
-            "description": "Disks successfully loaded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Disk"
-                  }
-                }
               }
             }
           }
@@ -1024,6 +1036,57 @@
       }
     },
     "/api/v1/servers/{serverId}/interfaces": {
+      "get": {
+        "tags": [
+          "Server Networking"
+        ],
+        "summary": "Get all interfaces and IPs of a server including routed IPs and rDNS entries.",
+        "responses": {
+          "200": {
+            "description": "Server interfaces of server successfully loaded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Interface"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Server not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "loadRdns",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "description": ""
+      },
       "post": {
         "tags": [
           "Server Networking"
@@ -1087,22 +1150,21 @@
           }
         ],
         "description": ""
-      },
+      }
+    },
+    "/api/v1/servers/{serverId}/interfaces/{mac}": {
       "get": {
         "tags": [
           "Server Networking"
         ],
-        "summary": "Get all interfaces and IPs of a server including routed IPs and rDNS entries.",
+        "summary": "Get an interface and IPs of a server including routed IPs and rDNS entries.",
         "responses": {
           "200": {
-            "description": "Server interfaces of server successfully loaded.",
+            "description": "IPv4s of server successfully loaded.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Interface"
-                  }
+                  "$ref": "#/components/schemas/Interface"
                 }
               }
             }
@@ -1119,6 +1181,15 @@
           }
         },
         "parameters": [
+          {
+            "name": "mac",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-fA-F0-9]{2}(:[a-fA-F0-9]{2}){5}$",
+              "type": "string"
+            }
+          },
           {
             "name": "serverId",
             "in": "path",
@@ -1138,9 +1209,7 @@
           }
         ],
         "description": ""
-      }
-    },
-    "/api/v1/servers/{serverId}/interfaces/{mac}": {
+      },
       "put": {
         "tags": [
           "Server Networking"
@@ -1248,29 +1317,31 @@
           }
         ],
         "description": ""
-      },
+      }
+    },
+    "/api/v1/servers/{serverId}/interfaces/{mac}/firewall": {
       "get": {
         "tags": [
-          "Server Networking"
+          "Server Firewalls"
         ],
-        "summary": "Get an interface and IPs of a server including routed IPs and rDNS entries.",
+        "summary": "Get firewall",
         "responses": {
           "200": {
-            "description": "IPv4s of server successfully loaded.",
+            "description": "Firewall successfully loaded.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Interface"
+                  "$ref": "#/components/schemas/ServerFirewall"
                 }
               }
             }
           },
           "404": {
-            "description": "Server not found.",
+            "description": "Firewall not found.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NotFoundError"
+                  "$ref": "#/components/schemas/ValidationError"
                 }
               }
             }
@@ -1296,18 +1367,17 @@
             }
           },
           {
-            "name": "loadRdns",
+            "name": "consistencyCheck",
             "in": "query",
+            "description": "Check that the firewall rules have been applied. This will set the consistent attribute to true or false.",
             "schema": {
               "type": "boolean",
-              "default": true
+              "default": false
             }
           }
         ],
         "description": ""
-      }
-    },
-    "/api/v1/servers/{serverId}/interfaces/{mac}/firewall": {
+      },
       "put": {
         "tags": [
           "Server Firewalls"
@@ -1371,64 +1441,6 @@
             "schema": {
               "type": "integer",
               "format": "int32"
-            }
-          }
-        ],
-        "description": ""
-      },
-      "get": {
-        "tags": [
-          "Server Firewalls"
-        ],
-        "summary": "Get firewall",
-        "responses": {
-          "200": {
-            "description": "Firewall successfully loaded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerFirewall"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Firewall not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationError"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "mac",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "pattern": "^[a-fA-F0-9]{2}(:[a-fA-F0-9]{2}){5}$",
-              "type": "string"
-            }
-          },
-          {
-            "name": "serverId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "consistencyCheck",
-            "in": "query",
-            "description": "Check that the firewall rules have been applied. This will set the consistent attribute to true or false.",
-            "schema": {
-              "type": "boolean",
-              "default": false
             }
           }
         ],
@@ -1528,6 +1540,36 @@
       }
     },
     "/api/v1/servers/{serverId}/iso": {
+      "get": {
+        "tags": [
+          "Server ISO"
+        ],
+        "summary": "Get attached ISO of a server.",
+        "responses": {
+          "200": {
+            "description": "ISO returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Iso"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "description": ""
+      },
       "post": {
         "tags": [
           "Server ISO"
@@ -1585,36 +1627,6 @@
         "responses": {
           "204": {
             "description": "ISO detached successfully."
-          }
-        },
-        "parameters": [
-          {
-            "name": "serverId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "description": ""
-      },
-      "get": {
-        "tags": [
-          "Server ISO"
-        ],
-        "summary": "Get attached ISO of a server.",
-        "responses": {
-          "200": {
-            "description": "ISO returned successfully.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Iso"
-                }
-              }
-            }
           }
         },
         "parameters": [
@@ -1891,6 +1903,46 @@
       }
     },
     "/api/v1/servers/{serverId}/rescuesystem": {
+      "get": {
+        "tags": [
+          "Servers"
+        ],
+        "summary": "Get rescue system status for a server.",
+        "responses": {
+          "200": {
+            "description": "Load rescue system status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RescueSystemStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Server not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "serverId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "description": ""
+      },
       "post": {
         "tags": [
           "Servers"
@@ -1990,19 +2042,24 @@
           }
         ],
         "description": ""
-      },
+      }
+    },
+    "/api/v1/servers/{serverId}/snapshots": {
       "get": {
         "tags": [
-          "Servers"
+          "Server Snapshots"
         ],
-        "summary": "Get rescue system status for a server.",
+        "summary": "Get all snapshots of a server.",
         "responses": {
           "200": {
-            "description": "Load rescue system status.",
+            "description": "Server snapshots successfully loaded.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RescueSystemStatus"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SnapshotMinimal"
+                  }
                 }
               }
             }
@@ -2013,6 +2070,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Node is in maintenance mode.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
                 }
               }
             }
@@ -2030,9 +2097,7 @@
           }
         ],
         "description": ""
-      }
-    },
-    "/api/v1/servers/{serverId}/snapshots": {
+      },
       "post": {
         "tags": [
           "Server Snapshots"
@@ -2101,74 +2166,21 @@
           }
         ],
         "description": ""
-      },
+      }
+    },
+    "/api/v1/servers/{serverId}/snapshots/{name}": {
       "get": {
         "tags": [
           "Server Snapshots"
         ],
-        "summary": "Get all snapshots of a server.",
+        "summary": "Get a snapshot of a server.",
         "responses": {
           "200": {
-            "description": "Server snapshots successfully loaded.",
+            "description": "Server snapshot successfully loaded.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SnapshotMinimal"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Server not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundError"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Node is in maintenance mode.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "serverId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "description": ""
-      }
-    },
-    "/api/v1/servers/{serverId}/snapshots/{name}": {
-      "delete": {
-        "tags": [
-          "Server Snapshots"
-        ],
-        "summary": "Delete a snapshot of a server",
-        "responses": {
-          "202": {
-            "description": "Deletion of snapshot successfully started.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TaskInfo"
+                  "$ref": "#/components/schemas/Snapshot"
                 }
               }
             }
@@ -2215,18 +2227,18 @@
         ],
         "description": ""
       },
-      "get": {
+      "delete": {
         "tags": [
           "Server Snapshots"
         ],
-        "summary": "Get a snapshot of a server.",
+        "summary": "Delete a snapshot of a server",
         "responses": {
-          "200": {
-            "description": "Server snapshot successfully loaded.",
+          "202": {
+            "description": "Deletion of snapshot successfully started.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Snapshot"
+                  "$ref": "#/components/schemas/TaskInfo"
                 }
               }
             }
@@ -2735,6 +2747,46 @@
       }
     },
     "/api/v1/users/{userId}": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get one user",
+        "responses": {
+          "200": {
+            "description": "User successfully returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "description": ""
+      },
       "put": {
         "tags": [
           "Users"
@@ -2777,46 +2829,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/UserSave"
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "userId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "description": ""
-      },
-      "get": {
-        "tags": [
-          "Users"
-        ],
-        "summary": "Get one user",
-        "responses": {
-          "200": {
-            "description": "User successfully returned.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/User"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "User not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundError"
-                }
               }
             }
           }
@@ -2917,6 +2929,16 @@
           },
           "404": {
             "description": "Failover IPv4 or server not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many failover IP routing requests: limited to 10 requests per 5 minutes and 20 requests per 60 minutes.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3049,6 +3071,16 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Too many failover IP routing requests: limited to 10 requests per 5 minutes and 20 requests per 60 minutes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            }
           }
         },
         "requestBody": {
@@ -3086,6 +3118,58 @@
       ]
     },
     "/api/v1/users/{userId}/firewall-policies": {
+      "get": {
+        "tags": [
+          "Server Firewalls"
+        ],
+        "summary": "Get firewall policies",
+        "responses": {
+          "200": {
+            "description": "Firewall policies successfully loaded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FirewallPolicy"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Search by name or description",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": ""
+      },
       "post": {
         "tags": [
           "Server Firewalls"
@@ -3142,58 +3226,6 @@
         },
         "description": ""
       },
-      "get": {
-        "tags": [
-          "Server Firewalls"
-        ],
-        "summary": "Get firewall policies",
-        "responses": {
-          "200": {
-            "description": "Firewall policies successfully loaded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/FirewallPolicy"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "maximum": 2147483647,
-              "minimum": 0,
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "schema": {
-              "maximum": 2147483647,
-              "minimum": 0,
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "description": "Search by name or description",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "description": ""
-      },
       "parameters": [
         {
           "name": "userId",
@@ -3207,6 +3239,36 @@
       ]
     },
     "/api/v1/users/{userId}/firewall-policies/{id}": {
+      "get": {
+        "tags": [
+          "Server Firewalls"
+        ],
+        "summary": "Get firewall policy",
+        "responses": {
+          "200": {
+            "description": "Firewall policies successfully loaded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FirewallPolicy"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "description": ""
+      },
       "put": {
         "tags": [
           "Server Firewalls"
@@ -3299,36 +3361,6 @@
         ],
         "description": ""
       },
-      "get": {
-        "tags": [
-          "Server Firewalls"
-        ],
-        "summary": "Get firewall policy",
-        "responses": {
-          "200": {
-            "description": "Firewall policies successfully loaded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FirewallPolicy"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "description": ""
-      },
       "parameters": [
         {
           "name": "userId",
@@ -3384,6 +3416,46 @@
       ]
     },
     "/api/v1/users/{userId}/images/{key}": {
+      "get": {
+        "tags": [
+          "Server Images"
+        ],
+        "summary": "Get download informations for an image",
+        "responses": {
+          "200": {
+            "description": "URL successfully signed.",
+            "content": {
+              "application/json": {
+                "example": "https://s3.anexia-it.com/example-bucket/share/f%3A9382f7fe-1225-4c10-8831-9d633eb0e805%3AendUser/iso/9c5c0d92-db43-40e3-8f1c-7a397863cdd2?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20221212T151511Z&X-Amz-SignedHeaders=host%3Bx-amz-te&X-Amz-Expires=3600&X-Amz-Credential=admin%2F20221212%2Fignored%2Fs3%2Faws4_request&X-Amz-Signature=e1007631a4a747e3d225c60000d661403d4c34c3c62ca10f92fa89465f08ccb7",
+                "schema": {
+                  "$ref": "#/components/schemas/S3DownloadInfos"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Image not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": ""
+      },
       "post": {
         "tags": [
           "Server Images"
@@ -3440,46 +3512,6 @@
         "responses": {
           "204": {
             "description": "Image successfully deleted."
-          }
-        },
-        "parameters": [
-          {
-            "name": "key",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "description": ""
-      },
-      "get": {
-        "tags": [
-          "Server Images"
-        ],
-        "summary": "Get download informations for an image",
-        "responses": {
-          "200": {
-            "description": "URL successfully signed.",
-            "content": {
-              "application/json": {
-                "example": "https://s3.anexia-it.com/example-bucket/share/f%3A9382f7fe-1225-4c10-8831-9d633eb0e805%3AendUser/iso/9c5c0d92-db43-40e3-8f1c-7a397863cdd2?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20221212T151511Z&X-Amz-SignedHeaders=host%3Bx-amz-te&X-Amz-Expires=3600&X-Amz-Credential=admin%2F20221212%2Fignored%2Fs3%2Faws4_request&X-Amz-Signature=e1007631a4a747e3d225c60000d661403d4c34c3c62ca10f92fa89465f08ccb7",
-                "schema": {
-                  "$ref": "#/components/schemas/S3DownloadInfos"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Image not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            }
           }
         },
         "parameters": [
@@ -3676,6 +3708,46 @@
       ]
     },
     "/api/v1/users/{userId}/isos/{key}": {
+      "get": {
+        "tags": [
+          "Server ISO"
+        ],
+        "summary": "Get presigned URL for an ISO",
+        "responses": {
+          "200": {
+            "description": "URL successfully signed.",
+            "content": {
+              "application/json": {
+                "example": "https://s3.anexia-it.com/example-bucket/share/f%3A9382f7fe-1225-4c10-8831-9d633eb0e805%3AendUser/iso/9c5c0d92-db43-40e3-8f1c-7a397863cdd2?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20221212T151511Z&X-Amz-SignedHeaders=host%3Bx-amz-te&X-Amz-Expires=3600&X-Amz-Credential=admin%2F20221212%2Fignored%2Fs3%2Faws4_request&X-Amz-Signature=e1007631a4a747e3d225c60000d661403d4c34c3c62ca10f92fa89465f08ccb7",
+                "schema": {
+                  "$ref": "#/components/schemas/S3DownloadInfos"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ISO not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": ""
+      },
       "post": {
         "tags": [
           "Server ISO"
@@ -3732,46 +3804,6 @@
         "responses": {
           "204": {
             "description": "ISO successfully deleted."
-          }
-        },
-        "parameters": [
-          {
-            "name": "key",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "description": ""
-      },
-      "get": {
-        "tags": [
-          "Server ISO"
-        ],
-        "summary": "Get presigned URL for an ISO",
-        "responses": {
-          "200": {
-            "description": "URL successfully signed.",
-            "content": {
-              "application/json": {
-                "example": "https://s3.anexia-it.com/example-bucket/share/f%3A9382f7fe-1225-4c10-8831-9d633eb0e805%3AendUser/iso/9c5c0d92-db43-40e3-8f1c-7a397863cdd2?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20221212T151511Z&X-Amz-SignedHeaders=host%3Bx-amz-te&X-Amz-Expires=3600&X-Amz-Credential=admin%2F20221212%2Fignored%2Fs3%2Faws4_request&X-Amz-Signature=e1007631a4a747e3d225c60000d661403d4c34c3c62ca10f92fa89465f08ccb7",
-                "schema": {
-                  "$ref": "#/components/schemas/S3DownloadInfos"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "ISO not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            }
           }
         },
         "parameters": [
@@ -3982,6 +4014,28 @@
       }
     },
     "/api/v1/users/{userId}/ssh-keys": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get SSH keys",
+        "responses": {
+          "200": {
+            "description": "SSH keys successfully loaded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SSHKey"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": ""
+      },
       "post": {
         "tags": [
           "Users"
@@ -4022,28 +4076,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SSHKey"
-              }
-            }
-          }
-        },
-        "description": ""
-      },
-      "get": {
-        "tags": [
-          "Users"
-        ],
-        "summary": "Get SSH keys",
-        "responses": {
-          "200": {
-            "description": "SSH keys successfully loaded.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SSHKey"
-                  }
-                }
               }
             }
           }
@@ -4165,6 +4197,46 @@
       ]
     },
     "/api/v1/users/{userId}/vlans/{vlanId}": {
+      "get": {
+        "tags": [
+          "Server Networking"
+        ],
+        "summary": "Get a VLan of a user",
+        "responses": {
+          "200": {
+            "description": "VLan successfully returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VLan"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VLan with id and user not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "vlanId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "description": ""
+      },
       "put": {
         "tags": [
           "Server Networking"
@@ -4200,46 +4272,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/VLanSave"
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "vlanId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "description": ""
-      },
-      "get": {
-        "tags": [
-          "Server Networking"
-        ],
-        "summary": "Get a VLan of a user",
-        "responses": {
-          "200": {
-            "description": "VLan successfully returned.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VLan"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "VLan with id and user not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotFoundError"
-                }
               }
             }
           }
@@ -5028,6 +5060,7 @@
       },
       "Maintenance": {
         "type": "object",
+        "deprecated": true,
         "properties": {
           "startAt": {
             "type": "string",
@@ -5371,9 +5404,6 @@
             "type": "boolean"
           },
           "passwordlessMode": {
-            "type": "boolean"
-          },
-          "secureMode": {
             "type": "boolean"
           },
           "apiIpLoginRestrictions": {
@@ -5821,7 +5851,7 @@
           "sources": {
             "uniqueItems": true,
             "type": "array",
-            "description": "Valid configurations are any IP (null or empty array), IPv4/IPv6 address (f.e. 192.168.10.1 or 0092:e10f:cb66:35a9::) or IPv4 network / IPv6 prefix (f.e. 192.168.10.0/24 or 0092:e10f:cb66:35a9::/64). If more than one IP/network is specified for the source, the destination must be empty (any) or contain only a single IP/network. If IPv4 addresses and IPv6 addresses are mixed in sources, destinations must empty (any).",
+            "description": "Valid configurations are any IP (null or empty array), IPv4/IPv6 address (f.e. 192.0.2.1 or 2001:db8::) or IPv4 network / IPv6 prefix (f.e. 192.0.2.0/24 or 2001:db8::/32). If more than one IP/network is specified for the source, the destination must be empty (any) or contain only a single IP/network. If IPv4 addresses and IPv6 addresses are mixed in sources, destinations must empty (any).",
             "items": {
               "type": "string"
             }
@@ -5834,7 +5864,7 @@
           "destinations": {
             "uniqueItems": true,
             "type": "array",
-            "description": "Valid configurations are any IP (null or empty array), IPv4/IPv6 address (f.e. 192.168.10.1 or 0092:e10f:cb66:35a9::) or IPv4 network / IPv6 prefix (f.e. 192.168.10.0/24 or 0092:e10f:cb66:35a9::/64). If more than one IP/network is specified for the destination, the source must be empty (any) or contain only a single IP/network. If IPv4 addresses and IPv6 addresses are mixed in destinations, sources must be empty (any).",
+            "description": "Valid configurations are any IP (null or empty array), IPv4/IPv6 address (f.e. 192.0.2.1 or 2001:db8::) or IPv4 network / IPv6 prefix (f.e. 192.0.2.0/24 or 2001:db8::/32). If more than one IP/network is specified for the destination, the source must be empty (any) or contain only a single IP/network. If IPv4 addresses and IPv6 addresses are mixed in destinations, sources must be empty (any).",
             "items": {
               "type": "string"
             }
@@ -6187,9 +6217,6 @@
           },
           "passwordlessMode": {
             "type": "boolean"
-          },
-          "secureMode": {
-            "type": "boolean"
           }
         }
       }
@@ -6201,136 +6228,5 @@
         "openIdConnectUrl": "/realms/scp/.well-known/openid-configuration"
       }
     }
-  },
-  "x-endpoints": {
-    "/scp-core": [
-      "/api/ping",
-      "/api/v1/admins",
-      "/api/v1/admins/{adminId}/firewall-policies",
-      "/api/v1/admins/{adminId}/firewall-policies/{id}",
-      "/api/v1/admins/{id}",
-      "/api/v1/bandwidthclasses",
-      "/api/v1/bandwidthclasses/{id}",
-      "/api/v1/clusters",
-      "/api/v1/clusters/mcp",
-      "/api/v1/clusters/{uuid}",
-      "/api/v1/clusters/{uuid}/load",
-      "/api/v1/db/mcp",
-      "/api/v1/defaultimages",
-      "/api/v1/defaultimages/{id}",
-      "/api/v1/defaultimages/{imageId}/flavours",
-      "/api/v1/defaultimages/{imageId}/flavours/{id}",
-      "/api/v1/failoverips/v4",
-      "/api/v1/failoverips/v6",
-      "/api/v1/ipv4",
-      "/api/v1/ipv4/{id}",
-      "/api/v1/ipv6",
-      "/api/v1/ipv6/{id}",
-      "/api/v1/isoimages",
-      "/api/v1/isoimages/{id}",
-      "/api/v1/maintenance",
-      "/api/v1/networks",
-      "/api/v1/networks/{id}",
-      "/api/v1/newsletters",
-      "/api/v1/newsletters/:dryrun",
-      "/api/v1/newsletters/templates",
-      "/api/v1/newsletters/templates/{id}",
-      "/api/v1/nodes",
-      "/api/v1/nodes/{id}",
-      "/api/v1/nodes/{id}/evacuations",
-      "/api/v1/nodes/{id}/evacuations/{evacuationId}",
-      "/api/v1/nodes/{id}/evacuations/{evacuationId}:cancel",
-      "/api/v1/nodes/{id}/servers/unreachable",
-      "/api/v1/nodes/{id}/servers/unreferenced",
-      "/api/v1/nodes/{id}/servers/unreferenced/{name}",
-      "/api/v1/nodes/{id}/stats",
-      "/api/v1/openapi",
-      "/api/v1/openapi/mcp",
-      "/api/v1/rdns/ipv4",
-      "/api/v1/rdns/ipv4/{ip}",
-      "/api/v1/rdns/ipv6",
-      "/api/v1/rdns/ipv6/{ip}",
-      "/api/v1/resellers",
-      "/api/v1/resellers/{id}",
-      "/api/v1/resellers/{id}/imageflavours",
-      "/api/v1/resellers/{resellerId}/email-templates",
-      "/api/v1/resellers/{resellerId}/servertemplates",
-      "/api/v1/resellers/{resellerId}/servertemplates/{id}",
-      "/api/v1/resellers/{resellerId}/settings",
-      "/api/v1/resellers/{resellerId}/settings/favicon",
-      "/api/v1/resellers/{resellerId}/settings/login-background",
-      "/api/v1/resellers/{resellerId}/settings/logo",
-      "/api/v1/resellers/{resellerId}/smtp",
-      "/api/v1/servers",
-      "/api/v1/servers/history",
-      "/api/v1/servers/{serverId}",
-      "/api/v1/servers/{serverId}/cloud-init",
-      "/api/v1/servers/{serverId}/disks",
-      "/api/v1/servers/{serverId}/disks/supported-drivers",
-      "/api/v1/servers/{serverId}/disks/{diskName}",
-      "/api/v1/servers/{serverId}/disks/{diskName}:format",
-      "/api/v1/servers/{serverId}/gpu-driver",
-      "/api/v1/servers/{serverId}/guest-agent",
-      "/api/v1/servers/{serverId}/guest-agent/status",
-      "/api/v1/servers/{serverId}/image",
-      "/api/v1/servers/{serverId}/imageflavours",
-      "/api/v1/servers/{serverId}/interfaces",
-      "/api/v1/servers/{serverId}/interfaces/{mac}",
-      "/api/v1/servers/{serverId}/interfaces/{mac}/firewall",
-      "/api/v1/servers/{serverId}/interfaces/{mac}/firewall:reapply",
-      "/api/v1/servers/{serverId}/interfaces/{mac}/firewall:restore-copied-policies",
-      "/api/v1/servers/{serverId}/interfaces/{mac}/ipv4/{id}",
-      "/api/v1/servers/{serverId}/interfaces/{mac}/ipv6",
-      "/api/v1/servers/{serverId}/interfaces/{mac}/ipv6/{id}",
-      "/api/v1/servers/{serverId}/iso",
-      "/api/v1/servers/{serverId}/isoimages",
-      "/api/v1/servers/{serverId}/logs",
-      "/api/v1/servers/{serverId}/metrics/cpu",
-      "/api/v1/servers/{serverId}/metrics/disk",
-      "/api/v1/servers/{serverId}/metrics/network",
-      "/api/v1/servers/{serverId}/metrics/network/packet",
-      "/api/v1/servers/{serverId}/node-repair",
-      "/api/v1/servers/{serverId}/rescuesystem",
-      "/api/v1/servers/{serverId}/snapshots",
-      "/api/v1/servers/{serverId}/snapshots/{name}",
-      "/api/v1/servers/{serverId}/snapshots/{name}/export",
-      "/api/v1/servers/{serverId}/snapshots/{name}/revert",
-      "/api/v1/servers/{serverId}/snapshots:dryrun",
-      "/api/v1/servers/{serverId}/storageoptimization",
-      "/api/v1/servers/{serverId}/target-nodes",
-      "/api/v1/servers/{serverId}/user-image",
-      "/api/v1/servers/{serverId}:clone",
-      "/api/v1/sites",
-      "/api/v1/sites/{id}",
-      "/api/v1/static-routes/v4",
-      "/api/v1/static-routes/v6",
-      "/api/v1/tasks",
-      "/api/v1/tasks/{uuid}",
-      "/api/v1/tasks/{uuid}/details",
-      "/api/v1/tasks/{uuid}:cancel",
-      "/api/v1/users",
-      "/api/v1/users/password",
-      "/api/v1/users/{userId}",
-      "/api/v1/users/{userId}/failoverips/v4",
-      "/api/v1/users/{userId}/failoverips/v4/{id}",
-      "/api/v1/users/{userId}/failoverips/v6",
-      "/api/v1/users/{userId}/failoverips/v6/{id}",
-      "/api/v1/users/{userId}/firewall-policies",
-      "/api/v1/users/{userId}/firewall-policies/{id}",
-      "/api/v1/users/{userId}/images",
-      "/api/v1/users/{userId}/images/{key}",
-      "/api/v1/users/{userId}/images/{key}/{uploadId}",
-      "/api/v1/users/{userId}/images/{key}/{uploadId}/parts/{partNumber}",
-      "/api/v1/users/{userId}/isos",
-      "/api/v1/users/{userId}/isos/{key}",
-      "/api/v1/users/{userId}/isos/{key}/{uploadId}",
-      "/api/v1/users/{userId}/isos/{key}/{uploadId}/parts/{partNumber}",
-      "/api/v1/users/{userId}/logs",
-      "/api/v1/users/{userId}/ssh-keys",
-      "/api/v1/users/{userId}/ssh-keys/{id}",
-      "/api/v1/users/{userId}/vlans",
-      "/api/v1/users/{userId}/vlans/{vlanId}",
-      "/api/v1/vlans/{vlanId}"
-    ]
   }
 }
