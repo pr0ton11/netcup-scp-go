@@ -466,7 +466,7 @@ type FirewallRule struct {
 	// DestinationPorts Valid configurations are any port (null), single port (f.e. 1234) or port range (f.e. 1024-65535).
 	DestinationPorts *string `json:"destinationPorts,omitempty"`
 
-	// Destinations Valid configurations are any IP (null or empty array), IPv4/IPv6 address (f.e. 192.168.10.1 or 0092:e10f:cb66:35a9::) or IPv4 network / IPv6 prefix (f.e. 192.168.10.0/24 or 0092:e10f:cb66:35a9::/64). If more than one IP/network is specified for the destination, the source must be empty (any) or contain only a single IP/network. If IPv4 addresses and IPv6 addresses are mixed in destinations, sources must be empty (any).
+	// Destinations Valid configurations are any IP (null or empty array), IPv4/IPv6 address (f.e. 192.0.2.1 or 2001:db8::) or IPv4 network / IPv6 prefix (f.e. 192.0.2.0/24 or 2001:db8::/32). If more than one IP/network is specified for the destination, the source must be empty (any) or contain only a single IP/network. If IPv4 addresses and IPv6 addresses are mixed in destinations, sources must be empty (any).
 	Destinations           *[]string             `json:"destinations,omitempty"`
 	Direction              FirewallRuleDirection `json:"direction"`
 	NumberOfEffectiveRules *int32                `json:"numberOfEffectiveRules,omitempty"`
@@ -475,7 +475,7 @@ type FirewallRule struct {
 	// SourcePorts Valid configurations are any port (null), single port (f.e. 1234) or port range (f.e. 1024-65535).
 	SourcePorts *string `json:"sourcePorts,omitempty"`
 
-	// Sources Valid configurations are any IP (null or empty array), IPv4/IPv6 address (f.e. 192.168.10.1 or 0092:e10f:cb66:35a9::) or IPv4 network / IPv6 prefix (f.e. 192.168.10.0/24 or 0092:e10f:cb66:35a9::/64). If more than one IP/network is specified for the source, the destination must be empty (any) or contain only a single IP/network. If IPv4 addresses and IPv6 addresses are mixed in sources, destinations must empty (any).
+	// Sources Valid configurations are any IP (null or empty array), IPv4/IPv6 address (f.e. 192.0.2.1 or 2001:db8::) or IPv4 network / IPv6 prefix (f.e. 192.0.2.0/24 or 2001:db8::/32). If more than one IP/network is specified for the source, the destination must be empty (any) or contain only a single IP/network. If IPv4 addresses and IPv6 addresses are mixed in sources, destinations must empty (any).
 	Sources *[]string `json:"sources,omitempty"`
 }
 
@@ -1017,7 +1017,6 @@ type User struct {
 	Language               *string `json:"language,omitempty"`
 	Lastname               *string `json:"lastname,omitempty"`
 	PasswordlessMode       *bool   `json:"passwordlessMode,omitempty"`
-	SecureMode             *bool   `json:"secureMode,omitempty"`
 	ShowNickname           *bool   `json:"showNickname,omitempty"`
 	TimeZone               *string `json:"timeZone,omitempty"`
 	Username               *string `json:"username,omitempty"`
@@ -1041,7 +1040,6 @@ type UserSave struct {
 	OldPassword            *string `json:"oldPassword,omitempty"`
 	Password               *string `json:"password,omitempty"`
 	PasswordlessMode       *bool   `json:"passwordlessMode,omitempty"`
-	SecureMode             *bool   `json:"secureMode,omitempty"`
 	ShowNickname           *bool   `json:"showNickname,omitempty"`
 	SoapWebservicePassword *string `json:"soapWebservicePassword,omitempty"`
 	TimeZone               string  `json:"timeZone"`
@@ -1083,6 +1081,9 @@ type GetApiV1ServersParams struct {
 
 	// Q Search ignoring case within the property name, nickname, or ipv4Addresses
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// Sort Sort by one or more fields. Prefix a field with '-' for descending order, no prefix for ascending. Allowed fields: name, nickname. Repeat the parameter to sort by multiple fields, e.g. ?sort=name&sort=-nickname.
+	Sort *[]string `form:"sort,omitempty" json:"sort,omitempty"`
 }
 
 // GetApiV1ServersServerIdParams defines parameters for GetApiV1ServersServerId.
@@ -3385,6 +3386,22 @@ func NewGetApiV1ServersRequest(server string, params *GetApiV1ServersParams) (*h
 		if params.Q != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "q", *params.Q, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Sort != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "sort", *params.Sort, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err
@@ -8786,6 +8803,7 @@ type PatchApiV1UsersUserIdFailoveripsV4IdResponse struct {
 	JSON202      *TaskInfo
 	JSON400      *ResponseError
 	JSON404      *ResponseError
+	JSON429      *ResponseError
 }
 
 // Status returns HTTPResponse.Status
@@ -8832,6 +8850,7 @@ type PatchApiV1UsersUserIdFailoveripsV6IdResponse struct {
 	JSON202      *TaskInfo
 	JSON400      *ResponseError
 	JSON404      *ResponseError
+	JSON429      *ResponseError
 }
 
 // Status returns HTTPResponse.Status
@@ -12266,6 +12285,13 @@ func ParsePatchApiV1UsersUserIdFailoveripsV4IdResponse(rsp *http.Response) (*Pat
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
 	}
 
 	return response, nil
@@ -12331,6 +12357,13 @@ func ParsePatchApiV1UsersUserIdFailoveripsV6IdResponse(rsp *http.Response) (*Pat
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
 
 	}
 
