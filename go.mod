@@ -5,6 +5,7 @@ go 1.26.1
 require (
 	github.com/oapi-codegen/oapi-codegen/v2 v2.6.0
 	github.com/oapi-codegen/runtime v1.2.0
+	golang.org/x/oauth2 v0.37.0
 )
 
 require (
