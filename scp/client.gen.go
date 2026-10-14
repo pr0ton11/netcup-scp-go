@@ -658,23 +658,27 @@ type SSHKey struct {
 
 // Server defines model for Server.
 type Server struct {
-	Architecture             *Architecture          `json:"architecture,omitempty"`
-	Disabled                 *bool                  `json:"disabled,omitempty"`
-	DisksAvailableSpaceInMiB *int64                 `json:"disksAvailableSpaceInMiB,omitempty"`
-	GpuDriverAvailable       *bool                  `json:"gpuDriverAvailable,omitempty"`
-	Hostname                 *string                `json:"hostname,omitempty"`
-	Id                       *int32                 `json:"id,omitempty"`
-	Ipv4Addresses            *[]IPv4AddressMinimal  `json:"ipv4Addresses,omitempty"`
-	Ipv6Addresses            *[]IPv6AddressMinimal  `json:"ipv6Addresses,omitempty"`
-	MaxCpuCount              *int32                 `json:"maxCpuCount,omitempty"`
-	Name                     *string                `json:"name,omitempty"`
-	Nickname                 *string                `json:"nickname,omitempty"`
-	RescueSystemActive       *bool                  `json:"rescueSystemActive,omitempty"`
-	ServerLiveInfo           *ServerInfo            `json:"serverLiveInfo,omitempty"`
-	Site                     *Site                  `json:"site,omitempty"`
-	SnapshotAllowed          *bool                  `json:"snapshotAllowed,omitempty"`
-	SnapshotCount            *int32                 `json:"snapshotCount,omitempty"`
-	Template                 *ServerTemplateMinimal `json:"template,omitempty"`
+	Architecture             *Architecture         `json:"architecture,omitempty"`
+	Disabled                 *bool                 `json:"disabled,omitempty"`
+	DisksAvailableSpaceInMiB *int64                `json:"disksAvailableSpaceInMiB,omitempty"`
+	ExportCount              *int32                `json:"exportCount,omitempty"`
+	GpuDriverAvailable       *bool                 `json:"gpuDriverAvailable,omitempty"`
+	Hostname                 *string               `json:"hostname,omitempty"`
+	Id                       *int32                `json:"id,omitempty"`
+	Ipv4Addresses            *[]IPv4AddressMinimal `json:"ipv4Addresses,omitempty"`
+	Ipv6Addresses            *[]IPv6AddressMinimal `json:"ipv6Addresses,omitempty"`
+	MaxCpuCount              *int32                `json:"maxCpuCount,omitempty"`
+	Name                     *string               `json:"name,omitempty"`
+	Nickname                 *string               `json:"nickname,omitempty"`
+	RescueSystemActive       *bool                 `json:"rescueSystemActive,omitempty"`
+	ServerLiveInfo           *ServerInfo           `json:"serverLiveInfo,omitempty"`
+	Site                     *Site                 `json:"site,omitempty"`
+	SnapshotAllowed          *bool                 `json:"snapshotAllowed,omitempty"`
+
+	// SnapshotCount Replaced by exportCount and will be removed by 31.12.2026. Contains the same value as exportCount.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	SnapshotCount *int32                 `json:"snapshotCount,omitempty"`
+	Template      *ServerTemplateMinimal `json:"template,omitempty"`
 }
 
 // ServerAttachIso defines model for ServerAttachIso.
@@ -687,6 +691,12 @@ type ServerAttachIso struct {
 // ServerAutostartPatch defines model for ServerAutostartPatch.
 type ServerAutostartPatch struct {
 	Autostart *bool `json:"autostart,omitempty"`
+}
+
+// ServerBackupTimePatch defines model for ServerBackupTimePatch.
+type ServerBackupTimePatch struct {
+	// BackupTime Daily backup start time as local time with UTC offset (HH:mm:ss+HH:mm, e.g. 01:30:00+02:00). Negative offsets are not supported. Default: 00:00:00+00:00.
+	BackupTime string `json:"backupTime"`
 }
 
 // ServerBootorderPatch defines model for ServerBootorderPatch.
@@ -754,7 +764,10 @@ type ServerImageSetup struct {
 
 // ServerInfo defines model for ServerInfo.
 type ServerInfo struct {
-	Autostart                   *bool                `json:"autostart,omitempty"`
+	Autostart *bool `json:"autostart,omitempty"`
+
+	// BackupTime Daily backup start time as local time with UTC offset (HH:mm:ss+HH:mm). Default: 00:00:00+00:00.
+	BackupTime                  *string              `json:"backupTime,omitempty"`
 	Bootorder                   *[]Bootorder         `json:"bootorder,omitempty"`
 	CloudinitAttached           *bool                `json:"cloudinitAttached,omitempty"`
 	ConfigChanged               *bool                `json:"configChanged,omitempty"`
@@ -1515,11 +1528,6 @@ type ClientInterface interface {
 
 	PostApiV1ServersServerIdSnapshots(ctx context.Context, serverId int32, body PostApiV1ServersServerIdSnapshotsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// PostApiV1ServersServerIdSnapshotsDryrunWithBody request with any body
-	PostApiV1ServersServerIdSnapshotsDryrunWithBody(ctx context.Context, serverId int32, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	PostApiV1ServersServerIdSnapshotsDryrun(ctx context.Context, serverId int32, body PostApiV1ServersServerIdSnapshotsDryrunJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// DeleteApiV1ServersServerIdSnapshotsName request
 	DeleteApiV1ServersServerIdSnapshotsName(ctx context.Context, serverId int32, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1531,6 +1539,11 @@ type ClientInterface interface {
 
 	// PostApiV1ServersServerIdSnapshotsNameRevert request
 	PostApiV1ServersServerIdSnapshotsNameRevert(ctx context.Context, serverId int32, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PostApiV1ServersServerIdSnapshotsDryrunWithBody request with any body
+	PostApiV1ServersServerIdSnapshotsDryrunWithBody(ctx context.Context, serverId int32, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PostApiV1ServersServerIdSnapshotsDryrun(ctx context.Context, serverId int32, body PostApiV1ServersServerIdSnapshotsDryrunJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PostApiV1ServersServerIdStorageoptimization request
 	PostApiV1ServersServerIdStorageoptimization(ctx context.Context, serverId int32, params *PostApiV1ServersServerIdStorageoptimizationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2333,30 +2346,6 @@ func (c *Client) PostApiV1ServersServerIdSnapshots(ctx context.Context, serverId
 	return c.Client.Do(req)
 }
 
-func (c *Client) PostApiV1ServersServerIdSnapshotsDryrunWithBody(ctx context.Context, serverId int32, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostApiV1ServersServerIdSnapshotsDryrunRequestWithBody(c.Server, serverId, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) PostApiV1ServersServerIdSnapshotsDryrun(ctx context.Context, serverId int32, body PostApiV1ServersServerIdSnapshotsDryrunJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostApiV1ServersServerIdSnapshotsDryrunRequest(c.Server, serverId, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 func (c *Client) DeleteApiV1ServersServerIdSnapshotsName(ctx context.Context, serverId int32, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteApiV1ServersServerIdSnapshotsNameRequest(c.Server, serverId, name)
 	if err != nil {
@@ -2395,6 +2384,30 @@ func (c *Client) PostApiV1ServersServerIdSnapshotsNameExport(ctx context.Context
 
 func (c *Client) PostApiV1ServersServerIdSnapshotsNameRevert(ctx context.Context, serverId int32, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPostApiV1ServersServerIdSnapshotsNameRevertRequest(c.Server, serverId, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PostApiV1ServersServerIdSnapshotsDryrunWithBody(ctx context.Context, serverId int32, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostApiV1ServersServerIdSnapshotsDryrunRequestWithBody(c.Server, serverId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PostApiV1ServersServerIdSnapshotsDryrun(ctx context.Context, serverId int32, body PostApiV1ServersServerIdSnapshotsDryrunJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostApiV1ServersServerIdSnapshotsDryrunRequest(c.Server, serverId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3730,7 +3743,7 @@ func NewPostApiV1ServersServerIdDisksDiskNameFormatRequest(server string, server
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/servers/%s/disks/%s/format", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/servers/%s/disks/%s:format", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4332,7 +4345,7 @@ func NewPostApiV1ServersServerIdInterfacesMacFirewallReapplyRequest(server strin
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/servers/%s/interfaces/%s/firewall/reapply", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/servers/%s/interfaces/%s/firewall:reapply", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4373,7 +4386,7 @@ func NewPostApiV1ServersServerIdInterfacesMacFirewallRestoreCopiedPoliciesReques
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/servers/%s/interfaces/%s/firewall/restore-copied-policies", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/api/v1/servers/%s/interfaces/%s/firewall:restore-copied-policies", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5019,53 +5032,6 @@ func NewPostApiV1ServersServerIdSnapshotsRequestWithBody(server string, serverId
 	return req, nil
 }
 
-// NewPostApiV1ServersServerIdSnapshotsDryrunRequest calls the generic PostApiV1ServersServerIdSnapshotsDryrun builder with application/json body
-func NewPostApiV1ServersServerIdSnapshotsDryrunRequest(server string, serverId int32, body PostApiV1ServersServerIdSnapshotsDryrunJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPostApiV1ServersServerIdSnapshotsDryrunRequestWithBody(server, serverId, "application/json", bodyReader)
-}
-
-// NewPostApiV1ServersServerIdSnapshotsDryrunRequestWithBody generates requests for PostApiV1ServersServerIdSnapshotsDryrun with any type of body
-func NewPostApiV1ServersServerIdSnapshotsDryrunRequestWithBody(server string, serverId int32, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "serverId", serverId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "integer", Format: "int32"})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/servers/%s/snapshots/dryrun", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
 // NewDeleteApiV1ServersServerIdSnapshotsNameRequest generates requests for DeleteApiV1ServersServerIdSnapshotsName
 func NewDeleteApiV1ServersServerIdSnapshotsNameRequest(server string, serverId int32, name string) (*http.Request, error) {
 	var err error
@@ -5226,6 +5192,53 @@ func NewPostApiV1ServersServerIdSnapshotsNameRevertRequest(server string, server
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewPostApiV1ServersServerIdSnapshotsDryrunRequest calls the generic PostApiV1ServersServerIdSnapshotsDryrun builder with application/json body
+func NewPostApiV1ServersServerIdSnapshotsDryrunRequest(server string, serverId int32, body PostApiV1ServersServerIdSnapshotsDryrunJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPostApiV1ServersServerIdSnapshotsDryrunRequestWithBody(server, serverId, "application/json", bodyReader)
+}
+
+// NewPostApiV1ServersServerIdSnapshotsDryrunRequestWithBody generates requests for PostApiV1ServersServerIdSnapshotsDryrun with any type of body
+func NewPostApiV1ServersServerIdSnapshotsDryrunRequestWithBody(server string, serverId int32, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "serverId", serverId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "integer", Format: "int32"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/servers/%s/snapshots:dryrun", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -5512,7 +5525,7 @@ func NewPutApiV1TasksUuidCancelRequest(server string, uuid string) (*http.Reques
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v1/tasks/%s/cancel", pathParam0)
+	operationPath := fmt.Sprintf("/api/v1/tasks/%s:cancel", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -7304,11 +7317,6 @@ type ClientWithResponsesInterface interface {
 
 	PostApiV1ServersServerIdSnapshotsWithResponse(ctx context.Context, serverId int32, body PostApiV1ServersServerIdSnapshotsJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV1ServersServerIdSnapshotsResponse, error)
 
-	// PostApiV1ServersServerIdSnapshotsDryrunWithBodyWithResponse request with any body
-	PostApiV1ServersServerIdSnapshotsDryrunWithBodyWithResponse(ctx context.Context, serverId int32, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV1ServersServerIdSnapshotsDryrunResponse, error)
-
-	PostApiV1ServersServerIdSnapshotsDryrunWithResponse(ctx context.Context, serverId int32, body PostApiV1ServersServerIdSnapshotsDryrunJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV1ServersServerIdSnapshotsDryrunResponse, error)
-
 	// DeleteApiV1ServersServerIdSnapshotsNameWithResponse request
 	DeleteApiV1ServersServerIdSnapshotsNameWithResponse(ctx context.Context, serverId int32, name string, reqEditors ...RequestEditorFn) (*DeleteApiV1ServersServerIdSnapshotsNameResponse, error)
 
@@ -7320,6 +7328,11 @@ type ClientWithResponsesInterface interface {
 
 	// PostApiV1ServersServerIdSnapshotsNameRevertWithResponse request
 	PostApiV1ServersServerIdSnapshotsNameRevertWithResponse(ctx context.Context, serverId int32, name string, reqEditors ...RequestEditorFn) (*PostApiV1ServersServerIdSnapshotsNameRevertResponse, error)
+
+	// PostApiV1ServersServerIdSnapshotsDryrunWithBodyWithResponse request with any body
+	PostApiV1ServersServerIdSnapshotsDryrunWithBodyWithResponse(ctx context.Context, serverId int32, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV1ServersServerIdSnapshotsDryrunResponse, error)
+
+	PostApiV1ServersServerIdSnapshotsDryrunWithResponse(ctx context.Context, serverId int32, body PostApiV1ServersServerIdSnapshotsDryrunJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV1ServersServerIdSnapshotsDryrunResponse, error)
 
 	// PostApiV1ServersServerIdStorageoptimizationWithResponse request
 	PostApiV1ServersServerIdStorageoptimizationWithResponse(ctx context.Context, serverId int32, params *PostApiV1ServersServerIdStorageoptimizationParams, reqEditors ...RequestEditorFn) (*PostApiV1ServersServerIdStorageoptimizationResponse, error)
@@ -7540,6 +7553,7 @@ func (r PostApiV1OpenapiMcpResponse) StatusCode() int {
 type PostApiV1RdnsIpv4Response struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON200      *interface{}
 	JSON422      *ValidationError
 }
 
@@ -7607,6 +7621,7 @@ func (r GetApiV1RdnsIpv4IpResponse) StatusCode() int {
 type PostApiV1RdnsIpv6Response struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON200      *interface{}
 	JSON422      *ValidationError
 }
 
@@ -7719,6 +7734,7 @@ func (r GetApiV1ServersServerIdResponse) StatusCode() int {
 type PatchApiV1ServersServerIdResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
+	JSON200      *interface{}
 	JSON202      *TaskInfo
 	JSON503      *ResponseError
 }
@@ -8493,30 +8509,6 @@ func (r PostApiV1ServersServerIdSnapshotsResponse) StatusCode() int {
 	return 0
 }
 
-type PostApiV1ServersServerIdSnapshotsDryrunResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *[]ResponseError
-	JSON400      *[]ResponseError
-	JSON404      *NotFoundError
-}
-
-// Status returns HTTPResponse.Status
-func (r PostApiV1ServersServerIdSnapshotsDryrunResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r PostApiV1ServersServerIdSnapshotsDryrunResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type DeleteApiV1ServersServerIdSnapshotsNameResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -8608,6 +8600,30 @@ func (r PostApiV1ServersServerIdSnapshotsNameRevertResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r PostApiV1ServersServerIdSnapshotsNameRevertResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PostApiV1ServersServerIdSnapshotsDryrunResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *[]ResponseError
+	JSON400      *[]ResponseError
+	JSON404      *NotFoundError
+}
+
+// Status returns HTTPResponse.Status
+func (r PostApiV1ServersServerIdSnapshotsDryrunResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PostApiV1ServersServerIdSnapshotsDryrunResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -9922,23 +9938,6 @@ func (c *ClientWithResponses) PostApiV1ServersServerIdSnapshotsWithResponse(ctx 
 	return ParsePostApiV1ServersServerIdSnapshotsResponse(rsp)
 }
 
-// PostApiV1ServersServerIdSnapshotsDryrunWithBodyWithResponse request with arbitrary body returning *PostApiV1ServersServerIdSnapshotsDryrunResponse
-func (c *ClientWithResponses) PostApiV1ServersServerIdSnapshotsDryrunWithBodyWithResponse(ctx context.Context, serverId int32, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV1ServersServerIdSnapshotsDryrunResponse, error) {
-	rsp, err := c.PostApiV1ServersServerIdSnapshotsDryrunWithBody(ctx, serverId, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePostApiV1ServersServerIdSnapshotsDryrunResponse(rsp)
-}
-
-func (c *ClientWithResponses) PostApiV1ServersServerIdSnapshotsDryrunWithResponse(ctx context.Context, serverId int32, body PostApiV1ServersServerIdSnapshotsDryrunJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV1ServersServerIdSnapshotsDryrunResponse, error) {
-	rsp, err := c.PostApiV1ServersServerIdSnapshotsDryrun(ctx, serverId, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePostApiV1ServersServerIdSnapshotsDryrunResponse(rsp)
-}
-
 // DeleteApiV1ServersServerIdSnapshotsNameWithResponse request returning *DeleteApiV1ServersServerIdSnapshotsNameResponse
 func (c *ClientWithResponses) DeleteApiV1ServersServerIdSnapshotsNameWithResponse(ctx context.Context, serverId int32, name string, reqEditors ...RequestEditorFn) (*DeleteApiV1ServersServerIdSnapshotsNameResponse, error) {
 	rsp, err := c.DeleteApiV1ServersServerIdSnapshotsName(ctx, serverId, name, reqEditors...)
@@ -9973,6 +9972,23 @@ func (c *ClientWithResponses) PostApiV1ServersServerIdSnapshotsNameRevertWithRes
 		return nil, err
 	}
 	return ParsePostApiV1ServersServerIdSnapshotsNameRevertResponse(rsp)
+}
+
+// PostApiV1ServersServerIdSnapshotsDryrunWithBodyWithResponse request with arbitrary body returning *PostApiV1ServersServerIdSnapshotsDryrunResponse
+func (c *ClientWithResponses) PostApiV1ServersServerIdSnapshotsDryrunWithBodyWithResponse(ctx context.Context, serverId int32, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV1ServersServerIdSnapshotsDryrunResponse, error) {
+	rsp, err := c.PostApiV1ServersServerIdSnapshotsDryrunWithBody(ctx, serverId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePostApiV1ServersServerIdSnapshotsDryrunResponse(rsp)
+}
+
+func (c *ClientWithResponses) PostApiV1ServersServerIdSnapshotsDryrunWithResponse(ctx context.Context, serverId int32, body PostApiV1ServersServerIdSnapshotsDryrunJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV1ServersServerIdSnapshotsDryrunResponse, error) {
+	rsp, err := c.PostApiV1ServersServerIdSnapshotsDryrun(ctx, serverId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePostApiV1ServersServerIdSnapshotsDryrunResponse(rsp)
 }
 
 // PostApiV1ServersServerIdStorageoptimizationWithResponse request returning *PostApiV1ServersServerIdStorageoptimizationResponse
@@ -10487,6 +10503,13 @@ func ParsePostApiV1RdnsIpv4Response(rsp *http.Response) (*PostApiV1RdnsIpv4Respo
 	}
 
 	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ValidationError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -10572,6 +10595,13 @@ func ParsePostApiV1RdnsIpv6Response(rsp *http.Response) (*PostApiV1RdnsIpv6Respo
 	}
 
 	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
 		var dest ValidationError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -10716,6 +10746,13 @@ func ParsePatchApiV1ServersServerIdResponse(rsp *http.Response) (*PatchApiV1Serv
 	}
 
 	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
 		var dest TaskInfo
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -11786,46 +11823,6 @@ func ParsePostApiV1ServersServerIdSnapshotsResponse(rsp *http.Response) (*PostAp
 	return response, nil
 }
 
-// ParsePostApiV1ServersServerIdSnapshotsDryrunResponse parses an HTTP response from a PostApiV1ServersServerIdSnapshotsDryrunWithResponse call
-func ParsePostApiV1ServersServerIdSnapshotsDryrunResponse(rsp *http.Response) (*PostApiV1ServersServerIdSnapshotsDryrunResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PostApiV1ServersServerIdSnapshotsDryrunResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest []ResponseError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest []ResponseError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest NotFoundError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseDeleteApiV1ServersServerIdSnapshotsNameResponse parses an HTTP response from a DeleteApiV1ServersServerIdSnapshotsNameWithResponse call
 func ParseDeleteApiV1ServersServerIdSnapshotsNameResponse(rsp *http.Response) (*DeleteApiV1ServersServerIdSnapshotsNameResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -11987,6 +11984,46 @@ func ParsePostApiV1ServersServerIdSnapshotsNameRevertResponse(rsp *http.Response
 			return nil, err
 		}
 		response.JSON503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePostApiV1ServersServerIdSnapshotsDryrunResponse parses an HTTP response from a PostApiV1ServersServerIdSnapshotsDryrunWithResponse call
+func ParsePostApiV1ServersServerIdSnapshotsDryrunResponse(rsp *http.Response) (*PostApiV1ServersServerIdSnapshotsDryrunResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PostApiV1ServersServerIdSnapshotsDryrunResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest []ResponseError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFoundError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	}
 

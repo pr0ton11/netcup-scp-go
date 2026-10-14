@@ -64,20 +64,30 @@ client, err := scp.NewClientWithResponses(
 
 ### Prerequisites
 
-- Go 1.22+
-- [oapi-codegen](https://github.com/oapi-codegen/oapi-codegen)
+- Go (version from `go.mod`)
+- Python 3 (for `scripts/patch-spec.py`)
+
+oapi-codegen runs via `go run` at the version pinned in `go.mod`, so it needs no separate install.
 
 ### Regenerating the client
 
 To fetch the latest upstream OpenAPI spec and regenerate the Go client:
 
 ```bash
-# Install tools (first time only)
-make install-tools
-
 # Fetch spec + patch + generate
 make generate
+
+# Build, vet and test
+make test
 ```
+
+### Spec patches
+
+`scripts/patch-spec.py` adjusts the upstream spec before generation:
+
+- drops the duplicate `application/hal+json` responses and maps `application/merge-patch+json` request bodies to `application/json`;
+- gives the custom method paths (`…/firewall:reapply`, `…/snapshots:dryrun`, …) an `operationId`. The paths themselves are kept, since they are the URLs the server serves;
+- converts the OpenAPI 3.1 constructs upstream uses (`"type": ["string", "null"]`, `anyOf` with `null`, `examples`) to 3.0, because oapi-codegen does not support 3.1. The script fails on any other 3.1 keyword, so a new one shows up as a failed run instead of a wrong client.
 
 Or run the full pipeline including tool installation:
 
