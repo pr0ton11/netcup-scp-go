@@ -3,7 +3,7 @@
   "info": {
     "title": "SCP (Server Control Panel) REST API",
     "description": "The version number is updated with each SCP release, regardless of whether the API has changed. Breaking changes are handled by versioning individual endpoints in the request path.",
-    "version": "2026.1012.092426"
+    "version": "2026.1015.105232"
   },
   "externalDocs": {
     "description": "netcup Forum",
@@ -5837,6 +5837,9 @@
           "sizeInB": {
             "type": "integer",
             "format": "int64"
+          },
+          "type": {
+            "$ref": "#/components/schemas/S3ObjectType"
           }
         }
       },
@@ -6033,6 +6036,15 @@
             "format": "int32"
           }
         }
+      },
+      "S3ObjectType": {
+        "type": "string",
+        "enum": [
+          "DISK",
+          "SNAPSHOT",
+          "BACKUP",
+          "MANUAL"
+        ]
       },
       "LogType": {
         "type": "string",
