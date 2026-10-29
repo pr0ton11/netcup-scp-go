@@ -209,6 +209,30 @@ func (e OsOptimization) Valid() bool {
 	}
 }
 
+// Defines values for S3ObjectType.
+const (
+	BACKUP   S3ObjectType = "BACKUP"
+	DISK     S3ObjectType = "DISK"
+	MANUAL   S3ObjectType = "MANUAL"
+	SNAPSHOT S3ObjectType = "SNAPSHOT"
+)
+
+// Valid indicates whether the value is a known member of the S3ObjectType enum.
+func (e S3ObjectType) Valid() bool {
+	switch e {
+	case BACKUP:
+		return true
+	case DISK:
+		return true
+	case MANUAL:
+		return true
+	case SNAPSHOT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ServerIpType.
 const (
 	IP       ServerIpType = "IP"
@@ -632,10 +656,14 @@ type S3NoSuchUploadError struct {
 
 // S3Object defines model for S3Object.
 type S3Object struct {
-	Key          *string    `json:"key,omitempty"`
-	LastModified *time.Time `json:"lastModified,omitempty"`
-	SizeInB      *int64     `json:"sizeInB,omitempty"`
+	Key          *string       `json:"key,omitempty"`
+	LastModified *time.Time    `json:"lastModified,omitempty"`
+	SizeInB      *int64        `json:"sizeInB,omitempty"`
+	Type         *S3ObjectType `json:"type,omitempty"`
 }
+
+// S3ObjectType defines model for S3ObjectType.
+type S3ObjectType string
 
 // S3SignPartURL defines model for S3SignPartURL.
 type S3SignPartURL struct {
