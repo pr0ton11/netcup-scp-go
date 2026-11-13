@@ -209,6 +209,30 @@ func (e OsOptimization) Valid() bool {
 	}
 }
 
+// Defines values for S3ObjectType.
+const (
+	BACKUP   S3ObjectType = "BACKUP"
+	DISK     S3ObjectType = "DISK"
+	MANUAL   S3ObjectType = "MANUAL"
+	SNAPSHOT S3ObjectType = "SNAPSHOT"
+)
+
+// Valid indicates whether the value is a known member of the S3ObjectType enum.
+func (e S3ObjectType) Valid() bool {
+	switch e {
+	case BACKUP:
+		return true
+	case DISK:
+		return true
+	case MANUAL:
+		return true
+	case SNAPSHOT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ServerIpType.
 const (
 	IP       ServerIpType = "IP"
@@ -632,10 +656,14 @@ type S3NoSuchUploadError struct {
 
 // S3Object defines model for S3Object.
 type S3Object struct {
-	Key          *string    `json:"key,omitempty"`
-	LastModified *time.Time `json:"lastModified,omitempty"`
-	SizeInB      *int64     `json:"sizeInB,omitempty"`
+	Key          *string       `json:"key,omitempty"`
+	LastModified *time.Time    `json:"lastModified,omitempty"`
+	SizeInB      *int64        `json:"sizeInB,omitempty"`
+	Type         *S3ObjectType `json:"type,omitempty"`
 }
+
+// S3ObjectType defines model for S3ObjectType.
+type S3ObjectType string
 
 // S3SignPartURL defines model for S3SignPartURL.
 type S3SignPartURL struct {
@@ -789,6 +817,7 @@ type ServerInfo struct {
 	Template                    *string              `json:"template,omitempty"`
 	Uefi                        *bool                `json:"uefi,omitempty"`
 	UptimeInSeconds             *int32               `json:"uptimeInSeconds,omitempty"`
+	Vsock                       *bool                `json:"vsock,omitempty"`
 }
 
 // ServerInterface defines model for ServerInterface.
@@ -920,6 +949,12 @@ type ServerUserImageSetup struct {
 	DiskName          *string `json:"diskName,omitempty"`
 	EmailNotification *bool   `json:"emailNotification,omitempty"`
 	UserImageName     string  `json:"userImageName"`
+}
+
+// ServerVsockPatch defines model for ServerVsockPatch.
+type ServerVsockPatch struct {
+	// Vsock Whether the vsock device required for apps should be attached. The server must be powered off.
+	Vsock bool `json:"vsock"`
 }
 
 // SetRdnsIpv4 defines model for SetRdnsIpv4.
@@ -1183,7 +1218,9 @@ type GetApiV1TasksParams struct {
 
 // GetApiV1UsersUserIdFailoveripsV4Params defines parameters for GetApiV1UsersUserIdFailoveripsV4.
 type GetApiV1UsersUserIdFailoveripsV4Params struct {
-	Ip *string `form:"ip,omitempty" json:"ip,omitempty"`
+	Ip     *string `form:"ip,omitempty" json:"ip,omitempty"`
+	Limit  *int32  `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int32  `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// ServerId Filter failover IPv4s of this user by server id
 	ServerId *int32 `form:"serverId,omitempty" json:"serverId,omitempty"`
@@ -1191,7 +1228,9 @@ type GetApiV1UsersUserIdFailoveripsV4Params struct {
 
 // GetApiV1UsersUserIdFailoveripsV6Params defines parameters for GetApiV1UsersUserIdFailoveripsV6.
 type GetApiV1UsersUserIdFailoveripsV6Params struct {
-	Ip *string `form:"ip,omitempty" json:"ip,omitempty"`
+	Ip     *string `form:"ip,omitempty" json:"ip,omitempty"`
+	Limit  *int32  `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int32  `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// ServerId Filter failover IPv6s of this user by server id
 	ServerId *int32 `form:"serverId,omitempty" json:"serverId,omitempty"`
@@ -5669,6 +5708,38 @@ func NewGetApiV1UsersUserIdFailoveripsV4Request(server string, userId int32, par
 
 		}
 
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Offset != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", *params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
 		if params.ServerId != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "serverId", *params.ServerId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
@@ -5782,6 +5853,38 @@ func NewGetApiV1UsersUserIdFailoveripsV6Request(server string, userId int32, par
 		if params.Ip != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "ip", *params.Ip, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Offset != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", *params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err
