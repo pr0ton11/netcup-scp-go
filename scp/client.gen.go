@@ -209,6 +209,30 @@ func (e OsOptimization) Valid() bool {
 	}
 }
 
+// Defines values for S3ObjectType.
+const (
+	BACKUP   S3ObjectType = "BACKUP"
+	DISK     S3ObjectType = "DISK"
+	MANUAL   S3ObjectType = "MANUAL"
+	SNAPSHOT S3ObjectType = "SNAPSHOT"
+)
+
+// Valid indicates whether the value is a known member of the S3ObjectType enum.
+func (e S3ObjectType) Valid() bool {
+	switch e {
+	case BACKUP:
+		return true
+	case DISK:
+		return true
+	case MANUAL:
+		return true
+	case SNAPSHOT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ServerIpType.
 const (
 	IP       ServerIpType = "IP"
@@ -558,6 +582,33 @@ type IsoImage struct {
 	Name         string       `json:"name"`
 }
 
+// Jwk A single public key entry in RFC 7517 JSON Web Key format
+type Jwk struct {
+	// Alg Algorithm the key is used with
+	Alg *string `json:"alg,omitempty"`
+
+	// E RSA public exponent, base64url-encoded
+	E *string `json:"e,omitempty"`
+
+	// Kid Key identifier
+	Kid *string `json:"kid,omitempty"`
+
+	// Kty Key type
+	Kty *string `json:"kty,omitempty"`
+
+	// N RSA modulus, base64url-encoded
+	N *string `json:"n,omitempty"`
+
+	// Use Intended use of the key
+	Use *string `json:"use,omitempty"`
+}
+
+// JwkSet RFC 7517 JSON Web Key Set
+type JwkSet struct {
+	// Keys Public keys available for secrets encryption
+	Keys *[]Jwk `json:"keys,omitempty"`
+}
+
 // Log defines model for Log.
 type Log struct {
 	Date          *time.Time   `json:"date,omitempty"`
@@ -632,10 +683,14 @@ type S3NoSuchUploadError struct {
 
 // S3Object defines model for S3Object.
 type S3Object struct {
-	Key          *string    `json:"key,omitempty"`
-	LastModified *time.Time `json:"lastModified,omitempty"`
-	SizeInB      *int64     `json:"sizeInB,omitempty"`
+	Key          *string       `json:"key,omitempty"`
+	LastModified *time.Time    `json:"lastModified,omitempty"`
+	SizeInB      *int64        `json:"sizeInB,omitempty"`
+	Type         *S3ObjectType `json:"type,omitempty"`
 }
+
+// S3ObjectType defines model for S3ObjectType.
+type S3ObjectType string
 
 // S3SignPartURL defines model for S3SignPartURL.
 type S3SignPartURL struct {
@@ -789,6 +844,7 @@ type ServerInfo struct {
 	Template                    *string              `json:"template,omitempty"`
 	Uefi                        *bool                `json:"uefi,omitempty"`
 	UptimeInSeconds             *int32               `json:"uptimeInSeconds,omitempty"`
+	Vsock                       *bool                `json:"vsock,omitempty"`
 }
 
 // ServerInterface defines model for ServerInterface.
@@ -920,6 +976,12 @@ type ServerUserImageSetup struct {
 	DiskName          *string `json:"diskName,omitempty"`
 	EmailNotification *bool   `json:"emailNotification,omitempty"`
 	UserImageName     string  `json:"userImageName"`
+}
+
+// ServerVsockPatch defines model for ServerVsockPatch.
+type ServerVsockPatch struct {
+	// Vsock Whether the vsock device required for apps should be attached. The server must be powered off.
+	Vsock bool `json:"vsock"`
 }
 
 // SetRdnsIpv4 defines model for SetRdnsIpv4.
@@ -1183,7 +1245,9 @@ type GetApiV1TasksParams struct {
 
 // GetApiV1UsersUserIdFailoveripsV4Params defines parameters for GetApiV1UsersUserIdFailoveripsV4.
 type GetApiV1UsersUserIdFailoveripsV4Params struct {
-	Ip *string `form:"ip,omitempty" json:"ip,omitempty"`
+	Ip     *string `form:"ip,omitempty" json:"ip,omitempty"`
+	Limit  *int32  `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int32  `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// ServerId Filter failover IPv4s of this user by server id
 	ServerId *int32 `form:"serverId,omitempty" json:"serverId,omitempty"`
@@ -1191,7 +1255,9 @@ type GetApiV1UsersUserIdFailoveripsV4Params struct {
 
 // GetApiV1UsersUserIdFailoveripsV6Params defines parameters for GetApiV1UsersUserIdFailoveripsV6.
 type GetApiV1UsersUserIdFailoveripsV6Params struct {
-	Ip *string `form:"ip,omitempty" json:"ip,omitempty"`
+	Ip     *string `form:"ip,omitempty" json:"ip,omitempty"`
+	Limit  *int32  `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int32  `form:"offset,omitempty" json:"offset,omitempty"`
 
 	// ServerId Filter failover IPv6s of this user by server id
 	ServerId *int32 `form:"serverId,omitempty" json:"serverId,omitempty"`
@@ -1372,6 +1438,9 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 type ClientInterface interface {
 	// GetApiPing request
 	GetApiPing(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetApiV1EncryptionKeys request
+	GetApiV1EncryptionKeys(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetApiV1Maintenance request
 	GetApiV1Maintenance(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1676,6 +1745,18 @@ type ClientInterface interface {
 
 func (c *Client) GetApiPing(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetApiPingRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetApiV1EncryptionKeys(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetApiV1EncryptionKeysRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -2980,6 +3061,33 @@ func NewGetApiPingRequest(server string) (*http.Request, error) {
 	}
 
 	operationPath := fmt.Sprintf("/api/ping")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetApiV1EncryptionKeysRequest generates requests for GetApiV1EncryptionKeys
+func NewGetApiV1EncryptionKeysRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/encryption-keys")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5669,6 +5777,38 @@ func NewGetApiV1UsersUserIdFailoveripsV4Request(server string, userId int32, par
 
 		}
 
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Offset != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", *params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
 		if params.ServerId != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "serverId", *params.ServerId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
@@ -5782,6 +5922,38 @@ func NewGetApiV1UsersUserIdFailoveripsV6Request(server string, userId int32, par
 		if params.Ip != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "ip", *params.Ip, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Offset != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "offset", *params.Offset, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
 				return nil, err
 			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
 				return nil, err
@@ -7162,6 +7334,9 @@ type ClientWithResponsesInterface interface {
 	// GetApiPingWithResponse request
 	GetApiPingWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiPingResponse, error)
 
+	// GetApiV1EncryptionKeysWithResponse request
+	GetApiV1EncryptionKeysWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiV1EncryptionKeysResponse, error)
+
 	// GetApiV1MaintenanceWithResponse request
 	GetApiV1MaintenanceWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiV1MaintenanceResponse, error)
 
@@ -7478,6 +7653,28 @@ func (r GetApiPingResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetApiPingResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetApiV1EncryptionKeysResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *JwkSet
+}
+
+// Status returns HTTPResponse.Status
+func (r GetApiV1EncryptionKeysResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetApiV1EncryptionKeysResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -9453,6 +9650,15 @@ func (c *ClientWithResponses) GetApiPingWithResponse(ctx context.Context, reqEdi
 	return ParseGetApiPingResponse(rsp)
 }
 
+// GetApiV1EncryptionKeysWithResponse request returning *GetApiV1EncryptionKeysResponse
+func (c *ClientWithResponses) GetApiV1EncryptionKeysWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiV1EncryptionKeysResponse, error) {
+	rsp, err := c.GetApiV1EncryptionKeys(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetApiV1EncryptionKeysResponse(rsp)
+}
+
 // GetApiV1MaintenanceWithResponse request returning *GetApiV1MaintenanceResponse
 func (c *ClientWithResponses) GetApiV1MaintenanceWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiV1MaintenanceResponse, error) {
 	rsp, err := c.GetApiV1Maintenance(ctx, reqEditors...)
@@ -10406,6 +10612,32 @@ func ParseGetApiPingResponse(rsp *http.Response) (*GetApiPingResponse, error) {
 	response := &GetApiPingResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseGetApiV1EncryptionKeysResponse parses an HTTP response from a GetApiV1EncryptionKeysWithResponse call
+func ParseGetApiV1EncryptionKeysResponse(rsp *http.Response) (*GetApiV1EncryptionKeysResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetApiV1EncryptionKeysResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest JwkSet
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
 	}
 
 	return response, nil
